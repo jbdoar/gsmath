@@ -1,0 +1,3 @@
+# Convenience install for contributors. Project and development dependencies
+# are defined canonically in pyproject.toml.
+-e .[dev]

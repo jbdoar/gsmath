@@ -1,0 +1,221 @@
+{
+  "format": "gsmath.calibration",
+  "version": 1,
+  "calibration": {
+    "name": "spectral",
+    "fingerprint": "5ea4744e3d4ce5f1",
+    "metadata": {
+      "sources": {
+        "cal": "Amplitude.cal"
+      }
+    },
+    "steps": [
+      {
+        "type": "SubtractDark",
+        "optional": true,
+        "arguments": {}
+      },
+      {
+        "type": "StrayLight",
+        "optional": false,
+        "arguments": {
+          "correction": {
+            "kind": "stray_light",
+            "wavelength": {
+              "dtype": "<f8",
+              "shape": [
+                4
+              ],
+              "data": "AAAAAAAAeUAAAAAAABB5QAAAAAAAIHlAAAAAAAAweUA="
+            },
+            "values": {
+              "dtype": "<f4",
+              "shape": [
+                4,
+                4
+              ],
+              "data": "AAAAPwAAAAAAAAAAAAAAAAAAAAAAAAA/AAAAAAAAAAAAAAAAAAAAAAAAAD8AAAAAAAAAAAAAAAAAAAAAAAAAPw=="
+            }
+          }
+        }
+      },
+      {
+        "type": "WavelengthAxis",
+        "optional": false,
+        "arguments": {
+          "solution": {
+            "kind": "wavelength_calibration",
+            "coefficients": {
+              "dtype": "<f8",
+              "shape": [
+                3
+              ],
+              "data": "je21oPfGsD4zMzMzMzPTPwAAAAAAEHlA"
+            },
+            "pixel_domain": [
+              0.0,
+              1023.0
+            ],
+            "fit_diagnostics": {
+              "method": "example"
+            },
+            "matches": [
+              {
+                "peak_index": 0,
+                "pixel": 10.5,
+                "wavelength_nm": 404.656,
+                "predicted_nm": 404.6,
+                "residual_nm": -0.056
+              },
+              {
+                "peak_index": 1,
+                "pixel": 500.25,
+                "wavelength_nm": 546.074,
+                "predicted_nm": 546.1,
+                "residual_nm": 0.026
+              },
+              {
+                "peak_index": 2,
+                "pixel": 900.0,
+                "wavelength_nm": 763.511,
+                "predicted_nm": 763.5,
+                "residual_nm": -0.011
+              }
+            ],
+            "peaks": [
+              {
+                "pixel": 10.5,
+                "height": 100.0,
+                "prominence": 90.0,
+                "width": 2.0
+              },
+              {
+                "pixel": 500.25,
+                "height": 80.0,
+                "prominence": 70.0,
+                "width": 2.5
+              },
+              {
+                "pixel": 900.0,
+                "height": 60.0,
+                "prominence": 50.0,
+                "width": 3.0
+              }
+            ]
+          }
+        }
+      },
+      {
+        "type": "Responsivity",
+        "optional": false,
+        "arguments": {
+          "responsivity": {
+            "kind": "spectrum",
+            "spectrum": {
+              "wavelength": {
+                "dtype": "<i4",
+                "shape": [
+                  4
+                ],
+                "data": "kAEAAJEBAACSAQAAkwEAAA=="
+              },
+              "values": {
+                "dtype": "<f8",
+                "shape": [
+                  4
+                ],
+                "data": "AAAAAAAA9D8AAAAAAAAEQAAAAAAAAAAAAAAAAAAA8L8="
+              },
+              "label": "lamp",
+              "wavelength_unit": "nm",
+              "value_unit": "\u03bcW / cm ** 2 / nm / sr",
+              "metadata": {
+                "instrument": "example",
+                "averages": 3,
+                "nested": {
+                  "a": [
+                    1,
+                    2
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "Responsivity",
+        "optional": false,
+        "arguments": {
+          "responsivity": {
+            "kind": "quantity",
+            "value": 3.0,
+            "unit": "1 / sr"
+          }
+        }
+      },
+      {
+        "type": "Responsivity",
+        "optional": false,
+        "arguments": {
+          "responsivity": {
+            "kind": "number",
+            "value": 2.0
+          }
+        }
+      },
+      {
+        "type": "Responsivity",
+        "optional": false,
+        "arguments": {
+          "responsivity": {
+            "kind": "array",
+            "array": {
+              "dtype": "<f8",
+              "shape": [
+                4
+              ],
+              "data": "AAAAAAAA8D8AAAAAAAAAQAAAAAAAAAhAAAAAAAAAEEA="
+            }
+          }
+        }
+      },
+      {
+        "type": "Despike",
+        "optional": false,
+        "arguments": {
+          "threshold": {
+            "kind": "number",
+            "value": 10.0
+          },
+          "window": {
+            "kind": "number",
+            "value": 31.0
+          },
+          "relative": {
+            "kind": "number",
+            "value": 0.02
+          }
+        }
+      },
+      {
+        "type": "AdaptiveSmooth",
+        "optional": false,
+        "arguments": {
+          "window": {
+            "kind": "number",
+            "value": 11.0
+          },
+          "order": {
+            "kind": "number",
+            "value": 3.0
+          },
+          "snr": {
+            "kind": "number",
+            "value": 30.0
+          }
+        }
+      }
+    ]
+  }
+}

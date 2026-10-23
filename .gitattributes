@@ -1,0 +1,17 @@
+* text=auto
+
+*.py text eol=lf
+*.toml text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.sh text eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+*.bin binary
+*.png binary
+*.xlsx binary
+
+# Native-format compatibility fixtures: compared byte for byte
+tests/data/native/* binary

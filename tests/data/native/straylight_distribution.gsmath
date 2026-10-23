@@ -1,0 +1,21 @@
+{
+  "format": "gsmath.straylight_distribution",
+  "version": 1,
+  "straylight": {
+    "wavelength": {
+      "dtype": "<f8",
+      "shape": [
+        4
+      ],
+      "data": "AAAAAAAAeUAAAAAAABB5QAAAAAAAIHlAAAAAAAAweUA="
+    },
+    "values": {
+      "dtype": "<f8",
+      "shape": [
+        4,
+        4
+      ],
+      "data": "mpmZmZmZuT8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJqZmZmZmbk/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACamZmZmZm5PwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAmpmZmZmZuT8="
+    }
+  }
+}

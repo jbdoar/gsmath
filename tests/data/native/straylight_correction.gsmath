@@ -1,0 +1,21 @@
+{
+  "format": "gsmath.straylight_correction",
+  "version": 1,
+  "straylight": {
+    "wavelength": {
+      "dtype": "<f8",
+      "shape": [
+        4
+      ],
+      "data": "AAAAAAAAeUAAAAAAABB5QAAAAAAAIHlAAAAAAAAweUA="
+    },
+    "values": {
+      "dtype": "<f8",
+      "shape": [
+        4,
+        4
+      ],
+      "data": "zczMzMzM7D8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM3MzMzMzOw/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADNzMzMzMzsPwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAzczMzMzM7D8="
+    }
+  }
+}

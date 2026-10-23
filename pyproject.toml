@@ -1,0 +1,74 @@
+# pyproject.toml
+
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gsmath"
+version = "0.5.0"
+description = "Spectrum math."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{name = "Jason Doar", email = "jbdoar@gmail.com"}]
+dependencies = [
+    "matplotlib>=3.6",
+    "numpy>=2.0",
+    "pandas>=1.5",
+    "pint>=0.20",
+    "scipy>=1.9",
+]
+license = "MIT"
+license-files = ["LICENSE", "NOTICE.md", "LICENSES/*"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+]
+
+[project.optional-dependencies]
+scripts = [
+    "openpyxl>=3.1",
+]
+images = [
+    "imagecodecs>=2023.1",
+    "rawpy>=0.21",
+    "tifffile>=2023.1",
+]
+dev = [
+    "imagecodecs>=2023.1",
+    "openpyxl>=3.1",
+    "pytest>=8",
+    "rawpy>=0.21",
+    "tifffile>=2023.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/jbdoar/gsmath"
+Issues = "https://github.com/jbdoar/gsmath/issues"
+
+[project.scripts]
+gsmath-straylight = "gsmath.scripts.straylight:main"
+gsmath-spectral-color-error = "gsmath.scripts.spectral_color_error:main"
+gsmath-generate-amplitude-cal = "gsmath.scripts.generate_amplitude_cal:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+gsmath = [
+    "reference/data/*.csv",
+    "reference/data/**/*.csv",
+]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]

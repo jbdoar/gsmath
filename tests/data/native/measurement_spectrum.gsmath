@@ -1,0 +1,74 @@
+{
+  "format": "gsmath.measurement",
+  "version": 1,
+  "measurement": {
+    "kind": "spectrum",
+    "raw": {
+      "wavelength": {
+        "dtype": "<i4",
+        "shape": [
+          4
+        ],
+        "data": "kAEAAJEBAACSAQAAkwEAAA=="
+      },
+      "values": {
+        "dtype": "<f8",
+        "shape": [
+          4
+        ],
+        "data": "AAAAAAAA9D8AAAAAAAAEQAAAAAAAAAAAAAAAAAAA8L8="
+      },
+      "label": "lamp",
+      "wavelength_unit": "nm",
+      "value_unit": "\u03bcW / cm ** 2 / nm / sr",
+      "metadata": {
+        "instrument": "example",
+        "averages": 3,
+        "nested": {
+          "a": [
+            1,
+            2
+          ]
+        }
+      }
+    },
+    "dark": {
+      "wavelength": {
+        "dtype": "<i4",
+        "shape": [
+          4
+        ],
+        "data": "kAEAAJEBAACSAQAAkwEAAA=="
+      },
+      "values": {
+        "dtype": "<f8",
+        "shape": [
+          4
+        ],
+        "data": "AAAAAAAA4D8AAAAAAADgPwAAAAAAAOA/AAAAAAAA4D8="
+      },
+      "label": "dark",
+      "wavelength_unit": "nm",
+      "value_unit": "\u03bcW / cm ** 2 / nm / sr",
+      "metadata": {}
+    },
+    "exposure": {
+      "value": 100.0,
+      "unit": "ms"
+    },
+    "label": "run 1",
+    "settings": {
+      "averages": 3
+    },
+    "instrument": {
+      "model": "example-spectrometer"
+    },
+    "metadata": {
+      "operator": "lab"
+    },
+    "calibration": {
+      "name": "c",
+      "fingerprint": "abc"
+    }
+  }
+}
