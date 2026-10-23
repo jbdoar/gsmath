@@ -11,6 +11,9 @@ Q_ = ureg.Quantity
 
 ureg.define("count = [count] = counts")
 ureg.define("pixel = [pixel] = px")
+# Relate an individual photon to the exact Avogadro constant so photon rates
+# can also be expressed in molar units for applications such as PPFD.
+ureg.define("photon = mole / 6.02214076e23 = photons")
 
 UnitLike = str | pint.Unit | None
 

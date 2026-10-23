@@ -4,6 +4,17 @@ Planned and deferred work, so it isn't forgotten. Ordered roughly by
 priority within each section. Move an item into the changelog or delete it
 when it lands.
 
+## Spectra: next
+
+- **Colour rendering of illuminants.** Implement CIE 13.3-1995 CRI as a
+  separate `Spectrum.color_rendering()` analysis: general `R_a`, special
+  indices R1-R14, the prescribed test-colour reflectance spectra, generated
+  Planckian/daylight reference illuminants, chromatic adaptation, and
+  validation against published reference results. Record the source and
+  redistribution terms for every bundled reflectance table. Design the result
+  so CIE 224:2017 `R_f` and its 99-sample set can be added without changing
+  the CRI API; report both during the standards transition.
+
 ## Imaging: now
 
 - **Calibrating a scientific camera as an imaging colorimeter.** Done so

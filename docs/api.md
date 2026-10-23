@@ -124,10 +124,12 @@ Call these through `spectrum.peaks()`, `spectrum.power()`,
 
 - `PeakAnalysis`: detected peak position, polynomial/Gaussian refinements,
   centroid, prominence, and FWHM.
-- `PowerAnalysis`: integrated power and spectral centroid.
+- `PowerAnalysis`: integrated power, spectral centroid, and unit-aware photon
+  flux for radiometric spectra.
 - `StatisticsAnalysis`: descriptive value statistics.
 - `ColorAnalysis`: XYZ, xy, CIE 1960 uv, CIE 1976 u'v', CIELAB, CIELUV,
-  correlated color temperature, Duv, and color differences.
+  correlated color temperature, Duv, dominant or complementary wavelength,
+  excitation purity, and color differences.
 - `xyz_to_lab(XYZ, white_XYZ)`, `xyz_to_luv(XYZ, white_XYZ)`, `xyz_to_xy(XYZ)`,
   `xyz_to_uv(XYZ)`, `xyz_to_uv_prime(XYZ)`, and `xyz_to_cct(XYZ)`: standalone
   conversions for scalar or broadcast-compatible arrays.

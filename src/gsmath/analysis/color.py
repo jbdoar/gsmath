@@ -23,6 +23,71 @@ if TYPE_CHECKING:
     from ..spectrum import Spectrum, SpectrumView
 
 
+def _cross_2d(left, right):
+    return left[0] * right[1] - left[1] * right[0]
+
+
+def _ray_segment_intersections(origin, direction, points, *, close=False):
+    """Return ``(ray distance, segment fraction, segment index)`` hits."""
+    count = len(points) if close else len(points) - 1
+    hits = []
+    tolerance = 64 * np.finfo(float).eps
+    for index in range(count):
+        start = points[index]
+        end = points[(index + 1) % len(points)]
+        segment = end - start
+        denominator = _cross_2d(direction, segment)
+        if abs(denominator) <= tolerance:
+            continue
+        offset = start - origin
+        distance = _cross_2d(offset, segment) / denominator
+        fraction = _cross_2d(offset, direction) / denominator
+        if distance > tolerance and -tolerance <= fraction <= 1 + tolerance:
+            hits.append((distance, np.clip(fraction, 0.0, 1.0), index))
+    return hits
+
+
+def _wavelength_at_intersection(hit, wavelength):
+    _, fraction, index = hit
+    return wavelength[index] + fraction * (wavelength[index + 1] - wavelength[index])
+
+
+def _dominant_wavelengths(xy, white_xy, cmf):
+    """Dominant/complementary wavelength and excitation purity in CIE xy."""
+    xy = np.asarray(xy, dtype=float)
+    white_xy = np.asarray(white_xy, dtype=float)
+    direction = xy - white_xy
+    if not np.all(np.isfinite(direction)):
+        return np.nan, np.nan, np.nan
+    if np.linalg.norm(direction) <= 64 * np.finfo(float).eps:
+        return np.nan, np.nan, 0.0
+
+    total = cmf.values.sum(axis=1)
+    valid = np.isfinite(total) & (total > 0)
+    locus = cmf.values[valid, :2] / total[valid, np.newaxis]
+    wavelength = cmf.wavelength[valid]
+
+    boundary_hits = _ray_segment_intersections(
+        white_xy, direction, locus, close=True
+    )
+    if not boundary_hits:
+        return np.nan, np.nan, np.nan
+    boundary = min(boundary_hits, key=lambda hit: hit[0])
+    purity = 1.0 / boundary[0]
+    purple_index = len(locus) - 1
+
+    if boundary[2] != purple_index:
+        return _wavelength_at_intersection(boundary, wavelength), np.nan, purity
+
+    opposite_hits = _ray_segment_intersections(white_xy, -direction, locus)
+    if not opposite_hits:
+        return np.nan, np.nan, purity
+    complementary = _wavelength_at_intersection(
+        min(opposite_hits, key=lambda hit: hit[0]), wavelength
+    )
+    return np.nan, complementary, purity
+
+
 @dataclass(frozen=True)
 class ColorAnalysis(AnalysisResult, Colorimetry):
     """Compute colorimetric quantities for one spectrum and CIE observer.
@@ -86,6 +151,9 @@ class ColorAnalysis(AnalysisResult, Colorimetry):
             "duv": units.ureg.dimensionless,
             "planck.cct": units.ureg.kelvin,
             "planck.duv": units.ureg.dimensionless,
+            "dominant_wavelength": units.ureg.nm,
+            "complementary_wavelength": units.ureg.nm,
+            "excitation_purity": units.ureg.dimensionless,
             "Lab": units.ureg.dimensionless,
             "Luv": units.ureg.dimensionless,
             "L_star": units.ureg.dimensionless,
@@ -125,6 +193,9 @@ class ColorAnalysis(AnalysisResult, Colorimetry):
                 "v_prime" : self.v_prime,
                 "planck.cct" : self.planck.cct,
                 "planck.duv" : self.planck.duv,
+                "dominant_wavelength" : self.dominant_wavelength,
+                "complementary_wavelength" : self.complementary_wavelength,
+                "excitation_purity" : self.excitation_purity,
                 "L_star" : self.L_star,
                 "a_star" : self.a_star,
                 "b_star" : self.b_star,
@@ -331,6 +402,27 @@ class ColorAnalysis(AnalysisResult, Colorimetry):
     def duv(self):
         """Return signed distance from the Planckian locus."""
         return self.planck.duv
+
+    @cached_property
+    def _dominant_wavelength_result(self):
+        """Dominant/complementary wavelength and excitation purity."""
+        white_xy = xyz_to_xy(self.white_XYZ)
+        return _dominant_wavelengths(self.xy, white_xy, self.cmf)
+
+    @property
+    def dominant_wavelength(self):
+        """CIE dominant wavelength in nm, or NaN for purple/achromatic light."""
+        return self._dominant_wavelength_result[0]
+
+    @property
+    def complementary_wavelength(self):
+        """CIE complementary wavelength in nm for purple light, otherwise NaN."""
+        return self._dominant_wavelength_result[1]
+
+    @property
+    def excitation_purity(self):
+        """Chromaticity distance from white relative to the locus boundary."""
+        return self._dominant_wavelength_result[2]
 
     def delta_e_2000(self, other, **kwargs):
         """Return CIEDE2000 difference from another color or LAB triple.

@@ -7,6 +7,7 @@ from gsmath.analysis.color import ColorAnalysis, xyz_to_lab, xyz_to_luv
 from gsmath import units
 from gsmath.constants import K_M
 from gsmath.reference.cmfs import CMFS
+from gsmath.reference.illuminants import ILLUMINANTS
 from gsmath.spectrum import Spectrum
 
 
@@ -337,6 +338,49 @@ def test_xyY(color):
     )
 
 
+def test_monochromatic_light_has_its_spectral_dominant_wavelength():
+    cmf = CMFS["2deg"]
+    values = np.zeros_like(cmf.wavelength)
+    values[np.flatnonzero(cmf.wavelength == 555)[0]] = 1.0
+
+    color = Spectrum(cmf.wavelength, values).color()
+
+    assert color.dominant_wavelength == pytest.approx(555.0)
+    assert np.isnan(color.complementary_wavelength)
+    assert color.excitation_purity == pytest.approx(1.0)
+    assert color.quantity("dominant_wavelength").units == units.ureg.nm
+
+
+def test_purple_light_reports_complementary_not_dominant_wavelength():
+    cmf = CMFS["2deg"]
+    values = np.zeros_like(cmf.wavelength)
+    values[np.flatnonzero(cmf.wavelength == 450)[0]] = 1.0
+    values[np.flatnonzero(cmf.wavelength == 650)[0]] = 1.0
+
+    color = Spectrum(cmf.wavelength, values).color()
+
+    assert np.isnan(color.dominant_wavelength)
+    assert color.complementary_wavelength == pytest.approx(561.575, abs=0.001)
+    assert 0 < color.excitation_purity < 1
+
+
+def test_reference_white_has_no_dominant_or_complementary_wavelength():
+    illuminant = ILLUMINANTS["D65"]
+    color = Spectrum(illuminant.wavelength, illuminant.values).color(white="D65")
+
+    assert np.isnan(color.dominant_wavelength)
+    assert np.isnan(color.complementary_wavelength)
+    assert color.excitation_purity == pytest.approx(0.0, abs=1e-12)
+
+
+def test_dominant_wavelength_results_are_in_color_summary(color):
+    summary = color.summary["2deg"]
+
+    assert summary["dominant_wavelength"] == color.dominant_wavelength
+    assert np.isnan(summary["complementary_wavelength"])
+    assert summary["excitation_purity"] == color.excitation_purity
+
+
 def test_uv(color):
     denominator = (
         -2 * color.x
@@ -399,6 +443,9 @@ def test_summary_contains_only_scalar_leaves(color):
         "v_prime",
         "planck.cct",
         "planck.duv",
+        "dominant_wavelength",
+        "complementary_wavelength",
+        "excitation_purity",
         "L_star",
         "a_star",
         "b_star",
@@ -439,6 +486,15 @@ def test_summary_uses_selected_observer(spectrum):
             "v_prime": pytest.approx(color.v_prime),
             "planck.cct": pytest.approx(color.planck.cct),
             "planck.duv": pytest.approx(color.planck.duv),
+            "dominant_wavelength": pytest.approx(
+                color.dominant_wavelength, nan_ok=True
+            ),
+            "complementary_wavelength": pytest.approx(
+                color.complementary_wavelength, nan_ok=True
+            ),
+            "excitation_purity": pytest.approx(
+                color.excitation_purity, nan_ok=True
+            ),
             "L_star": pytest.approx(color.L_star),
             "a_star": pytest.approx(color.a_star),
             "b_star": pytest.approx(color.b_star),

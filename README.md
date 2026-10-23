@@ -45,7 +45,8 @@ values and units.
 - Spectra, multi-channel series, images, regions of interest, and collections
 - CSV, LightTouch, image, raw-camera, and native `.gsmath` I/O
 - Interpolation, smoothing, cleaning, normalization, arithmetic, and plotting
-- Peak, power, statistics, color, uniformity, and slanted-edge MTF analysis
+- Peak, power, photon-flux, color, dominant-wavelength, uniformity, and
+  slanted-edge MTF analysis
 - Measurement records, calibration pipelines, exposure bracketing, and HDR
 - Camera colorimetry, dark/flat/linearity correction, mosaics, and perspective
 - Declarative profiles, tolerances, comparisons, reports, and DataFrames

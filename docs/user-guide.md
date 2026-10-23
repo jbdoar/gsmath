@@ -315,6 +315,26 @@ summary = spectrum.summary(include_units=True)
 table = report(spectrum, include_units=True)
 ```
 
+For a radiometric spectral density, `power().photon_flux` integrates the
+photon rate using each wavelength's photon energy. Its unit follows the input:
+spectral power produces photons/s, irradiance produces photons/(m^2 s), and
+radiance retains its steradian denominator. The `photon` unit converts to
+moles, so photosynthetic photon flux density over a selected 400-700 nm band
+can be reported directly:
+
+```python
+photon_rate = spectrum.power().quantity("photon_flux")
+ppfd = (
+    spectrum.trim(400, 700)
+    .power()
+    .quantity("photon_flux")
+    .to("umol / m^2 / s")
+)
+```
+
+Photon flux requires a physical wavelength axis and radiometric rate units;
+unitless spectra, detector counts, and energy-only spectra are rejected.
+
 Reports place units in column labels so their cells remain numeric. Wavelength
 and width results use the wavelength unit, descriptive statistics use the
 value unit, and spectral integrals combine both. Chromaticity coordinates and
@@ -342,6 +362,18 @@ standalone `gsmath.delta_e_2000(Lab1, Lab2)` function. Color-analysis operands
 must use the same observer and reference white. The standalone function also
 supports broadcast-compatible arrays and the application weighting parameters
 `k_L`, `k_C`, and `k_H`.
+
+Dominant wavelength is calculated in the selected observer's `xy` diagram
+from the selected reference white to the spectral-locus boundary. Purple
+stimuli have no dominant wavelength, so they report a complementary wavelength
+instead. Achromatic stimuli report neither and have zero excitation purity:
+
+```python
+color = spectrum.color(white="D65", observer="2deg")
+print(color.dominant_wavelength)       # nm, or NaN for purple/achromatic light
+print(color.complementary_wavelength)  # nm for purple light, otherwise NaN
+print(color.excitation_purity)         # 0 at white, 1 on the locus boundary
+```
 
 ## Comparing spectra
 
