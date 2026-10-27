@@ -11,13 +11,18 @@ def to_lighttouch(
     *,
     integration_time_ms=0.0,
     name="LightTouch Amplitude Cal (1500 nm,0 ms,0 ms)",
+    quantity="radiance",
 ):
     """Write a wavelength/value spectrum as a LightTouch amplitude ``.cal``.
 
     LightTouch amplitude calibration files store calibration factors as the
     two spectral columns. Units are identified by the file header rather than
-    by per-column unit metadata in this legacy format.
+    by per-column unit metadata in this legacy format: ``quantity`` is
+    ``'radiance'`` (µW/cm²/sr, the default) or ``'irradiance'`` (µW/cm²).
     """
+    headers = {"radiance": "Radiance (µW/cm²/sr)", "irradiance": "Irradiance (µW/cm²)"}
+    if quantity not in headers:
+        raise ValueError("quantity must be 'radiance' or 'irradiance'")
     path = Path(path)
     wavelength = np.asarray(spectrum.wavelength, dtype=float)
     values = np.asarray(spectrum.values, dtype=float)
@@ -34,7 +39,7 @@ def to_lighttouch(
     with path.open("w", encoding="utf-8", newline="\n") as stream:
         stream.write("2.0 [Gamma Scientific Spectral File]\n")
         stream.write(f"{name}\n")
-        stream.write("Radiance (µW/cm²/sr)  \n")
+        stream.write(f"{headers[quantity]}  \n")
         # LightTouch's reader locates data after 4 + this count + 3 lines.
         stream.write("1\n")
         stream.write(f"{integration_time_ms:.8g} [Integration Time ms]\n")

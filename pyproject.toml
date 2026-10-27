@@ -57,6 +57,7 @@ gsmath-straylight = "gsmath.scripts.straylight:main"
 gsmath-spectral-color-error = "gsmath.scripts.spectral_color_error:main"
 gsmath-generate-amplitude-cal = "gsmath.scripts.generate_amplitude_cal:main"
 gsmath-wavelength = "gsmath.scripts.wavelength:main"
+gsmath-amplitude = "gsmath.scripts.amplitude:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
