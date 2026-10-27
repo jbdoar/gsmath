@@ -1,0 +1,41 @@
+# HgAr emission lines, air wavelengths in nm, from the NIST Handbook of Basic
+# Atomic Spectroscopic Data strong-line tables:
+# https://physics.nist.gov/PhysRefData/Handbook/Tables/mercurytable2.htm
+# https://physics.nist.gov/PhysRefData/Handbook/Tables/argontable2.htm
+# use = no keeps a line out of the fit and the evaluation; it still marks its
+# neighbours as blends when they are within reach at the instrument's resolution.
+wavelength_nm,species,use
+365.015,Hg I,yes
+404.656,Hg I,yes
+435.833,Hg I,yes
+546.074,Hg I,yes
+576.960,Hg I,yes
+579.066,Hg I,yes
+696.543,Ar I,yes
+706.722,Ar I,yes
+714.704,Ar I,yes
+727.294,Ar I,yes
+738.398,Ar I,yes
+750.387,Ar I,yes
+751.465,Ar I,yes
+763.511,Ar I,yes
+772.376,Ar I,yes
+772.421,Ar I,yes
+794.818,Ar I,yes
+800.616,Ar I,yes
+801.479,Ar I,yes
+810.369,Ar I,yes
+811.531,Ar I,yes
+826.452,Ar I,yes
+840.821,Ar I,yes
+842.465,Ar I,yes
+852.144,Ar I,yes
+866.794,Ar I,yes
+912.297,Ar I,yes
+922.4499,Ar I,yes
+935.4220,Ar I,yes
+965.7786,Ar I,yes
+978.4503,Ar I,yes
+1005.206,Ar I,yes
+1046.7177,Ar I,yes
+1047.0054,Ar I,yes

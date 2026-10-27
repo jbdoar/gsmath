@@ -35,6 +35,9 @@ from .wavelength import (
 from .linefit import (LineSpreadFunction, JointLineFit, FactoryLineModel,
                       fit_lamp_lines, fit_factory_lines)
 from .wavelength_validation import HeldOutLine, WavelengthValidation, validate_factory_lines
+from .wavelength_lines import (EmissionLine, MeasuredLine, WavelengthEvaluation, lamp_lines,
+                               line_center, measure_lines, evaluate_wavelength,
+                               fit_wavelength, plot_evaluation)
 
 from .comparison import (
     Comparison,
@@ -146,6 +149,15 @@ __all__ = [
     "detect_calibration_peaks",
     "identify_calibration_lines",
     "calibrate_wavelength",
+    "EmissionLine",
+    "MeasuredLine",
+    "WavelengthEvaluation",
+    "lamp_lines",
+    "line_center",
+    "measure_lines",
+    "evaluate_wavelength",
+    "fit_wavelength",
+    "plot_evaluation",
     "LineSpreadFunction",
     "JointLineFit",
     "FactoryLineModel",
