@@ -608,8 +608,15 @@ gsmath-spectral-color-error --help
 gsmath-generate-amplitude-cal --help
 ```
 
-`gsmath-straylight` generates and evaluates a stray-light correction from a
-directory of wavelength scans. `gsmath-spectral-color-error` compares two
+`gsmath-straylight calibrate SCANS` builds a stray-light correction from a
+directory of monochromator line scans and evaluates it on them;
+`gsmath-straylight evaluate SCANS --matrix C.gsmath` evaluates an existing
+one. The scans are listed by a `manifest.csv` (`file`, `set_wavelength_nm`)
+or named `StrayLight_<nm>.csv`; each is a native measurement or spectrum, a
+LightTouch export or a two-column CSV. The science is in
+`gsmath.straylight`: `characterize_scan`, `build_distribution`,
+`evaluate_correction`, and `stray_light_calibration` for all of it in one
+call. `gsmath-spectral-color-error` compares two
 LightTouch spectra and writes a chromaticity-error plot. These commands accept
 ordinary platform-native paths and create their output directories as needed.
 The stray-light generator writes grid-bearing native `D.gsmath` and

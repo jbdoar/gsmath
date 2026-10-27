@@ -52,7 +52,7 @@ def test_straylight_cli_accepts_platform_native_paths(tmp_path):
     assert args.output == output
 
 
-@pytest.mark.parametrize("command", ["run", "generate"])
+@pytest.mark.parametrize("command", ["calibrate", "run", "generate"])
 def test_straylight_generation_help_describes_options_and_defaults(
     command,
     capsys,
@@ -61,7 +61,7 @@ def test_straylight_generation_help_describes_options_and_defaults(
         straylight_parser().parse_args([command, "--help"])
 
     help_text = capsys.readouterr().out
-    assert "Directory containing the wavelength-scan CSV files" in help_text
+    assert "Directory containing the wavelength-scan files" in help_text
     assert "--suppression FACTOR" in help_text
     assert "(default: StrayLight_*.csv)" in help_text
     assert "(default: 1.0)" in help_text

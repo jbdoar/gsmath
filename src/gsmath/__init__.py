@@ -90,7 +90,8 @@ from .export import (
     print_result,
 )
 
-from .straylight import StrayLightCorrection, StrayLightDistribution
+from .straylight import (LineSpreadScan, StrayLightCalibrationResult, StrayLightCorrection,
+                         StrayLightDistribution, StrayLightEvaluation, stray_light_calibration)
 
 from .report import report
 

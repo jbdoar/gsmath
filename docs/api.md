@@ -194,6 +194,25 @@ See the [reference-data notice](../NOTICE.md) before redistributing these data.
 Both matrix types provide `regrid(new_wavelength, bounds="raise")`. Review the
 approximation limits in the user guide before using a regridded correction.
 
+Building a correction from monochromator line scans (`gsmath.straylight`):
+
+- `LineSpreadScan(spectrum, set_wavelength_nm, label="")`: one dark-subtracted
+  scan; `characterize_scan(scan, max_center_error_nm=2.5, band_factor=3.0,
+  guard_fwhm=1.0)` returns it with its centre, FWHM and accepted/rejected
+  status.
+- `read_line_scans(directory, pattern="StrayLight_*.csv")`: the scans listed
+  in the directory's `manifest.csv` (`file`, `set_wavelength_nm`), or named
+  `StrayLight_<nm>`; native measurements (dark subtracted) or spectra,
+  LightTouch exports or two-column CSVs. `read_line_scan(path)` reads one.
+- `build_distribution(scans, band_factor=3.0, suppression=1.0,
+  one_count=ONE_COUNT, gaussian_sigma=1.0)`: D from the accepted scans.
+- `evaluate_correction(correction, scans, band_factor=3.0)`: a
+  `StrayLightEvaluation` (out-of-band suppression, negative artifacts,
+  in-band change per scan; `rows()`, `table()`, `summary`).
+- `stray_light_calibration(scans, ..., min_accepted=2)`: all of it; a
+  `StrayLightCalibrationResult` with `distribution`, `correction`,
+  `evaluation`, `summary` and `write(directory)`.
+
 ## Wavelength calibration
 
 These APIs are experimental. Validate reference lines, correspondence, and
@@ -239,7 +258,8 @@ then call `show()` or `save(path)`.
 
 Installing the package provides:
 
-- `gsmath-straylight`: generate and evaluate stray-light corrections.
+- `gsmath-straylight calibrate|evaluate`: build and evaluate stray-light
+  corrections from monochromator line scans.
 - `gsmath-spectral-color-error`: evaluate spectral color error.
 - `gsmath-generate-amplitude-cal`: generate amplitude calibration artifacts.
 
