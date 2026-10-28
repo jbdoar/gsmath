@@ -1,8 +1,5 @@
 """Presentation-oriented tabular reports built from export DataFrames."""
 
-from .export import to_dataframe
-
-
 def report(
     value,
     *,
@@ -12,6 +9,8 @@ def report(
     include_units=False,
 ):
     """Create a compact rounded report from a summary or comparison."""
+    from .export import to_dataframe
+
     dataframe = to_dataframe(value, include_units=include_units)
 
     if not include_mode:

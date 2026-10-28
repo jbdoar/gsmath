@@ -45,7 +45,7 @@ FORMATS: list[FileFormat] = [
                {"spectrum": read_native, "image": read_native_image},
                {"spectrum": write_native, "image": write_native_image}),
     FileFormat("csv", (), (".csv",), {"spectrum": from_csv}, {"spectrum": to_csv}),
-    FileFormat("lighttouch", ("light-touch",), (".cal",),
+    FileFormat("lighttouch", ("light-touch",), (".cal", ".std"),
                {"spectrum": from_lighttouch}, {"spectrum": to_lighttouch}),
     FileFormat("png", (), (".png",),
                {"image": lambda path, **kw: read_raster(path, format="png", **kw)},

@@ -3,7 +3,7 @@ import json
 import numpy as np
 import pytest
 
-from gsmath import Spectrum
+from gsmath import Spectrum, units
 
 
 @pytest.fixture
@@ -94,6 +94,38 @@ def test_lighttouch_calibration_round_trip(tmp_path):
     ]
     np.testing.assert_allclose(restored.wavelength, spectrum.wavelength, atol=5e-7)
     np.testing.assert_allclose(restored.values, spectrum.values, rtol=1e-8)
+    assert restored.value_unit == spectrum.value_unit
+
+
+@pytest.mark.parametrize(("quantity", "expected_unit"), [
+    ("Radiance", "uW / cm^2 / sr / nm"),
+    ("Irradiance", "uW / cm^2 / nm"),
+    ("Counts", "count"),
+    ("Custom quantity", None),
+])
+def test_lighttouch_reader_assigns_header_quantity_unit(
+    quantity, expected_unit, tmp_path,
+):
+    path = tmp_path / "measurement.std"
+    path.write_text(
+        "2.0 [Gamma Scientific Spectral File]\n"
+        "Sample\n"
+        f"{quantity}\n"
+        "1\n"
+        "25 [Integration Time ms]\n"
+        "400\n"
+        "2\n"
+        "500\n"
+        "400,1\n"
+        "500,2\n",
+        encoding="utf-8",
+    )
+
+    restored = Spectrum.read(path)
+
+    assert restored.value_unit == (
+        units.parse(expected_unit) if expected_unit else None
+    )
 
 
 def test_native_rejects_unknown_version(spectrum, tmp_path):

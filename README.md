@@ -71,3 +71,9 @@ pytest
 
 `gsmath` requires Python 3.10 or newer. The source code is MIT licensed;
 bundled reference datasets have separate terms recorded in [NOTICE.md](NOTICE.md).
+
+Public exports are loaded on demand. Import the names you need, such as
+`from gsmath import Spectrum`, to keep unrelated analysis, plotting, and
+export modules out of startup. The first use of a feature loads its
+dependencies; subsequent accesses reuse them. `from gsmath import *` is
+supported, but loads all names in `__all__`.
