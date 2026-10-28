@@ -11,7 +11,8 @@ its line spread function (LSF), at each set wavelength. From those scans:
   detector's ends for its band to be measured;
 - :func:`build_distribution` turns the accepted scans into the distribution
   matrix D: column j is the out-of-band signal, relative to the in-band sum,
-  for a line at the j-th detector wavelength (interpolated between scans);
+  for a line at the j-th detector wavelength (interpolated between scans, by
+  default in distance from the line);
 - the correction is ``C = inverse(I + D)``: :meth:`StrayLightDistribution.correction`;
 - :func:`evaluate_correction` applies C to scans and reports how much of the
   out-of-band signal it removes, and what it costs (negative artifacts,
@@ -375,19 +376,37 @@ def read_line_scans(directory, pattern="StrayLight_*.csv") -> list[LineSpreadSca
 # Distribution matrix
 # ---------------------------------------------------------------------------
 
+INTERPOLATIONS = ("shifted", "linear")
+
+
 def build_distribution(scans, *, band_factor: float = 3.0, suppression: float = 1.0,
-                       one_count: float = ONE_COUNT, gaussian_sigma: float = 1.0
-                       ) -> StrayLightDistribution:
+                       one_count: float = ONE_COUNT, gaussian_sigma: float = 1.0,
+                       interpolation: str = "shifted") -> StrayLightDistribution:
     """The distribution matrix D from accepted scans (others are ignored).
 
     Each scan is normalised to its peak; values below ``one_count`` are set
     to zero (the detector's noise floor). Its column of D is that, divided by
     its in-band sum and scaled by ``suppression``, with the in-band samples
-    zeroed. The columns are smoothed with a Gaussian of ``gaussian_sigma``
-    matrix samples (0: none), then interpolated linearly from the scans'
-    centres to every detector wavelength. Beyond the outermost scans' centres
-    the interpolation extends the end columns.
+    zeroed. The columns are then filled in for every detector wavelength
+    between the scans' centres:
+
+    - ``"shifted"`` (default): each column is interpolated in distance from
+      the line. Both neighbouring scans' columns are shifted so their lines
+      sit at the source wavelength, then blended linearly, so the near-band
+      shoulders move with the line. Beyond the outermost scans their columns
+      are shifted. Smoothing (``gaussian_sigma`` detector samples, 0: none)
+      is along detector wavelength only. On a dense sweep this lets the scans
+      be many line widths apart without loss; it would smear a stray feature
+      that is fixed in detector wavelength rather than moving with the line.
+    - ``"linear"``: each detector sample is interpolated linearly between the
+      scans' columns, at fixed detector wavelength; between two scans that
+      blends two lines' shoulders at two places, so it needs scans close
+      together. The columns are smoothed with a Gaussian of
+      ``gaussian_sigma`` matrix samples on both axes first, and beyond the
+      outermost scans the end columns are extended unchanged.
     """
+    if interpolation not in INTERPOLATIONS:
+        raise ValueError(f"interpolation must be one of {INTERPOLATIONS}, not {interpolation!r}")
     scans = sorted((s for s in scans if s.accepted), key=lambda s: s.center_nm)
     if len(scans) < 2:
         raise ValueError("at least two accepted scans are needed to build D")
@@ -411,10 +430,30 @@ def build_distribution(scans, *, band_factor: float = 3.0, suppression: float = 
     if np.any(np.diff(centers) <= 0):
         raise ValueError("accepted scan centres must be distinct")
     measured = np.clip(np.column_stack(columns), 0, None)
+    if interpolation == "shifted":
+        return StrayLightDistribution(np.asarray(x, dtype=float).copy(),
+                                      _shifted(measured, centers, x, gaussian_sigma))
     if gaussian_sigma:
         measured = scipy.ndimage.gaussian_filter(measured, sigma=gaussian_sigma)
     interpolator = RectBivariateSpline(x, centers, measured, kx=1, ky=1, s=0)
     return StrayLightDistribution(np.asarray(x, dtype=float).copy(), interpolator(x, x))
+
+
+def _shifted(measured, centers, x, gaussian_sigma):
+    """D's columns for every detector wavelength, from the scans' columns
+    ``measured`` (one per centre), interpolated in distance from the line."""
+    if gaussian_sigma:
+        measured = scipy.ndimage.gaussian_filter1d(measured, sigma=gaussian_sigma, axis=0)
+    x = np.asarray(x, dtype=float)
+    right = np.clip(np.searchsorted(centers, x), 1, len(centers) - 1)
+    weight = np.clip((x - centers[right - 1]) / (centers[right] - centers[right - 1]), 0, 1)
+    D = np.empty((len(x), len(x)))
+    for i, source in enumerate(x):
+        j = right[i]
+        below = np.interp(x - (source - centers[j - 1]), x, measured[:, j - 1], left=0, right=0)
+        above = np.interp(x - (source - centers[j]), x, measured[:, j], left=0, right=0)
+        D[:, i] = (1 - weight[i]) * below + weight[i] * above
+    return D
 
 
 # ---------------------------------------------------------------------------
@@ -603,7 +642,8 @@ class StrayLightCalibrationResult(Result):
 def stray_light_calibration(scans, *, max_center_error_nm: float = 2.5, band_factor: float = 3.0,
                             suppression: float = 1.0, one_count: float = ONE_COUNT,
                             gaussian_sigma: float = 1.0, guard_fwhm: float = 1.0,
-                            min_accepted: int = 2) -> StrayLightCalibrationResult:
+                            min_accepted: int = 2, interpolation: str = "shifted"
+                            ) -> StrayLightCalibrationResult:
     """Characterise the scans, build D and C from the accepted ones, and
     evaluate C on them. Raises ValueError with fewer than ``min_accepted``
     accepted scans."""
@@ -615,11 +655,13 @@ def stray_light_calibration(scans, *, max_center_error_nm: float = 2.5, band_fac
     if len(accepted) < needed:
         raise ValueError(f"{len(accepted)} of {len(scans)} scans accepted; at least {needed} are needed")
     distribution = build_distribution(accepted, band_factor=band_factor, suppression=suppression,
-                                      one_count=one_count, gaussian_sigma=gaussian_sigma)
+                                      one_count=one_count, gaussian_sigma=gaussian_sigma,
+                                      interpolation=interpolation)
     correction = distribution.correction()
     settings = {"max_center_error_nm": max_center_error_nm, "band_factor": band_factor,
                 "suppression": suppression, "one_count": one_count,
-                "gaussian_sigma": gaussian_sigma, "guard_fwhm": guard_fwhm}
+                "gaussian_sigma": gaussian_sigma, "guard_fwhm": guard_fwhm,
+                "interpolation": interpolation}
     evaluation = evaluate_correction(correction, accepted, band_factor=band_factor)
     return StrayLightCalibrationResult(scans, distribution, correction, evaluation, settings)
 

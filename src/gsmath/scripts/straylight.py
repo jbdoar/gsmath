@@ -21,7 +21,7 @@ import sys
 from pathlib import Path
 
 from gsmath.straylight import (
-    ONE_COUNT, StrayLightCorrection, characterize_scan, evaluate_correction, plot_correction,
+    INTERPOLATIONS, ONE_COUNT, StrayLightCorrection, characterize_scan, evaluate_correction, plot_correction,
     read_line_scans, stray_light_calibration, write_rows,
 )
 
@@ -40,7 +40,8 @@ def calibrate(args) -> int:
     result = stray_light_calibration(
         scans, max_center_error_nm=args.max_center_error, band_factor=args.band_factor,
         suppression=args.suppression, one_count=args.one_count,
-        gaussian_sigma=args.gaussian_sigma, min_accepted=args.min_accepted)
+        gaussian_sigma=args.gaussian_sigma, min_accepted=args.min_accepted,
+        interpolation=args.interpolation)
     matrix = result.write(args.output)
     (args.output / "evaluation.txt").write_text(result.evaluation.table() + "\n", encoding="utf-8")
     accepted = result.accepted
@@ -130,8 +131,11 @@ def parser():
                    help="Normalized signal level treated as one detector count; lower values are "
                         "set to zero.")
     c.add_argument("--gaussian-sigma", type=float, default=1.0, metavar="SIGMA",
-                   help="Standard deviation, in matrix samples, for Gaussian smoothing; use 0 to "
-                        "disable smoothing.")
+                   help="Standard deviation, in samples, for Gaussian smoothing (shifted: along "
+                        "detector wavelength; linear: both matrix axes); use 0 to disable smoothing.")
+    c.add_argument("--interpolation", choices=INTERPOLATIONS, default="shifted",
+                   help="How D is filled in between scans: shifted (in distance from the line) or "
+                        "linear (at fixed detector wavelength).")
     c.add_argument("--min-accepted", type=int, default=2, metavar="N",
                    help="Fewest accepted scans to build a matrix from.")
     c.set_defaults(func=calibrate)

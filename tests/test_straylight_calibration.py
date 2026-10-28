@@ -13,11 +13,13 @@ from gsmath.straylight import (
 X = np.arange(300.0, 901.0, 1.0)
 
 
-def line_scan(center, *, fwhm=5.0, stray=2e-3, peak=40000.0):
-    """A Gaussian line with a broad, weak stray-light pedestal, in counts."""
+def line_scan(center, *, fwhm=5.0, stray=2e-3, peak=40000.0, shoulder=0.0):
+    """A Gaussian line with a broad, weak stray-light pedestal, in counts;
+    ``shoulder`` adds near-band stray light, 12 nm wide."""
     sigma = fwhm / 2.3548
     line = np.exp(-0.5 * ((X - center) / sigma) ** 2)
     pedestal = stray * np.exp(-0.5 * ((X - center) / 150.0) ** 2)
+    pedestal += shoulder * np.exp(-0.5 * ((X - center) / 12.0) ** 2)
     return Spectrum(wavelength=X.copy(), values=peak * (line + pedestal), label=f"{center:g}",
                     wavelength_unit="nm", value_unit="count")
 
@@ -61,6 +63,41 @@ def test_build_distribution_ignores_rejected_scans_and_needs_two():
         build_distribution(checked[:1] + [rejected])
     with pytest.raises(ValueError, match="4 scans accepted|1 of"):
         stray_light_calibration(scans([500]) + [LineSpreadScan(line_scan(700), 650.0)], min_accepted=3)
+
+
+def test_shifted_interpolation_corrects_lines_between_sparse_scans():
+    """Scans 40 nm apart, lines held out halfway between: the shifted D
+    moves the near-band shoulder with the line; linear blends two shoulders
+    in the wrong places and leaves much more behind."""
+    def checked(centers):
+        return [characterize_scan(LineSpreadScan(line_scan(c, shoulder=2e-2), float(c))) for c in centers]
+    built, held_out = checked(range(340, 861, 40)), checked(range(360, 841, 40))
+    residual = {}
+    for interpolation in ("shifted", "linear"):
+        correction = build_distribution(built, interpolation=interpolation).correction()
+        residual[interpolation] = evaluate_correction(correction, held_out).summary["median_suppression_ratio"]
+    assert residual["shifted"] < 0.1
+    assert residual["shifted"] < residual["linear"] / 3
+
+
+def test_shifted_interpolation_reproduces_each_scan_and_extends_the_ends():
+    built = [characterize_scan(s) for s in scans([400, 500, 600])]
+    d = build_distribution(built, gaussian_sigma=0)
+    linear = build_distribution(built, gaussian_sigma=0, interpolation="linear")
+    for scan in built:
+        i = int(np.argmin(np.abs(X - scan.center_nm)))
+        np.testing.assert_allclose(d.values[:, i], linear.values[:, i],
+                                   atol=0.02 * linear.values[:, i].max())
+
+    def centroid(column):
+        return np.sum(X * column) / np.sum(column)
+
+    # Beyond the last scan, its column moves with the line rather than staying put.
+    at_600, at_700 = (int(np.argmin(np.abs(X - w))) for w in (600, 700))
+    assert centroid(d.values[:, at_700]) - centroid(d.values[:, at_600]) > 50
+    assert centroid(linear.values[:, at_700]) == pytest.approx(centroid(linear.values[:, at_600]))
+    with pytest.raises(ValueError, match="interpolation"):
+        build_distribution(built, interpolation="cubic")
 
 
 def test_identity_correction_changes_nothing():

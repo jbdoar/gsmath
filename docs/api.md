@@ -205,7 +205,11 @@ Building a correction from monochromator line scans (`gsmath.straylight`):
   `StrayLight_<nm>`; native measurements (dark subtracted) or spectra,
   LightTouch exports or two-column CSVs. `read_line_scan(path)` reads one.
 - `build_distribution(scans, band_factor=3.0, suppression=1.0,
-  one_count=ONE_COUNT, gaussian_sigma=1.0)`: D from the accepted scans.
+  one_count=ONE_COUNT, gaussian_sigma=1.0, interpolation="shifted")`: D from
+  the accepted scans. Between scans, `"shifted"` interpolates each column in
+  distance from the line (scans can be many line widths apart);
+  `"linear"` interpolates at fixed detector wavelength (needs scans close
+  together).
 - `evaluate_correction(correction, scans, band_factor=3.0)`: a
   `StrayLightEvaluation` (out-of-band suppression, negative artifacts,
   in-band change per scan; `rows()`, `table()`, `summary`).
