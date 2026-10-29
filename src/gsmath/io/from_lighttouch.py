@@ -17,10 +17,11 @@ def from_lighttouch(path):
         
     lines = path.read_text(encoding=encoding).splitlines()
 
-    header_length = int(lines[3])
+    # A file saved from a spreadsheet ends each header line with a comma.
+    header_length = int(lines[3].strip().rstrip(","))
     data_start = 4 + header_length + 3
 
-    header = lines[:data_start]
+    header = [line.strip().rstrip(",").rstrip() for line in lines[:data_start]]
     integration_time = None
 
     for line in header:

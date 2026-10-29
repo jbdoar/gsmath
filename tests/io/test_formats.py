@@ -96,6 +96,25 @@ def test_lighttouch_calibration_round_trip(tmp_path):
     np.testing.assert_allclose(restored.values, spectrum.values, rtol=1e-8)
 
 
+def test_lighttouch_spectral_file_saved_from_a_spreadsheet(tmp_path):
+    # Header lines end with a comma, the header block is padded with empty
+    # fields, and the text is cp1252.
+    from gsmath.amplitude import lighttouch_unit
+
+    lines = ["2.0 [Gamma Scientific Spectral File],", "Spectral Scan,", "Radiance (µW/cm²/sr)  ,",
+             "3,", ",", ",", ",", "300.0,", "3,", "310.0,",
+             "300.0,1.5e-02", "305.0,2.5e-02", "310.0,3.5e-02"]
+    path = tmp_path / "standard.csv"
+    path.write_bytes(("\r\n".join(lines) + "\r\n").encode("cp1252"))
+
+    spectrum = Spectrum.from_lighttouch(path)
+
+    np.testing.assert_allclose(spectrum.wavelength, [300.0, 305.0, 310.0])
+    np.testing.assert_allclose(spectrum.values, [1.5e-2, 2.5e-2, 3.5e-2])
+    assert spectrum.metadata["header"][2] == "Radiance (µW/cm²/sr)"
+    assert lighttouch_unit(spectrum) is not None
+
+
 def test_native_rejects_unknown_version(spectrum, tmp_path):
     path = tmp_path / "measurement.gsmath"
     spectrum.write(path)
