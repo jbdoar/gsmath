@@ -128,6 +128,38 @@ def test_lighttouch_reader_assigns_header_quantity_unit(
     )
 
 
+def test_lighttouch_reader_tolerates_spreadsheet_trailing_commas(tmp_path):
+    path = tmp_path / "standard.csv"
+    path.write_bytes(
+        (
+            "2.0 [Gamma Scientific Spectral File],\r\n"
+            "Spectral Scan,\r\n"
+            "Radiance (µW/cm²/sr)  ,\r\n"
+            "2,\r\n"
+            ",\r\n"
+            "25 [Integration Time ms],\r\n"
+            "400.0,\r\n"
+            "2,\r\n"
+            "500.0,\r\n"
+            "400.0,1.5e+01\r\n"
+            "500.0,2.5e+01\r\n"
+        ).encode("cp1252")
+    )
+
+    restored = Spectrum.read(path, format="lighttouch")
+
+    np.testing.assert_array_equal(restored.wavelength, [400.0, 500.0])
+    np.testing.assert_array_equal(restored.values, [15.0, 25.0])
+    assert restored.value_unit == units.parse("uW / cm^2 / sr / nm")
+    assert restored.metadata["integration_time"] == 25.0
+    assert restored.metadata["header"][:4] == [
+        "2.0 [Gamma Scientific Spectral File]",
+        "Spectral Scan",
+        "Radiance (µW/cm²/sr)  ",
+        "2",
+    ]
+
+
 def test_native_rejects_unknown_version(spectrum, tmp_path):
     path = tmp_path / "measurement.gsmath"
     spectrum.write(path)

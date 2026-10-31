@@ -22,10 +22,13 @@ def from_lighttouch(path):
         
     lines = path.read_text(encoding=encoding).splitlines()
 
-    header_length = int(lines[3])
+    # Spreadsheet round trips (e.g. Excel "Save as CSV") pad every header
+    # line with trailing delimiters, such as "35," or ",". Strip them so the
+    # header parses and is stored as LightTouch wrote it.
+    header_length = int(lines[3].rstrip(","))
     data_start = 4 + header_length + 3
 
-    header = lines[:data_start]
+    header = [line.rstrip(",") for line in lines[:data_start]]
     integration_time = None
 
     for line in header:
