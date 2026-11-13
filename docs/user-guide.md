@@ -555,6 +555,27 @@ A missing or extra label raises an error rather than silently dropping an
 item. The comparison results retain the measured collection's order, label,
 and metadata.
 
+### Collections as single files
+
+A collection saves to one native `.gsmath` file (a `gsmath.collection`
+record): its label and metadata, then each item as its own native record, in
+order. Items can be spectra, measurements, exposure series, images, or other
+collections. A collection of spectra stays readable JSON; one holding an image
+is written as a container. Labels must be unique when written and when read.
+
+```python
+references.write("unit references.gsmath")
+measured.write("SN-2066.gsmath")
+
+# The same comparison, from the files:
+paired_results = compare(gsmath.read("SN-2066.gsmath"),
+                         gsmath.read("unit references.gsmath"), profile=profile)
+```
+
+`Collection.read(path)` reads one back and checks it is a collection;
+`gsmath.read(path)` returns whatever a native file holds. Comparison results
+(collections of `Comparison`) have no record yet and can't be written this way.
+
 ## Reading and writing spectra
 
 Use the native `.gsmath` format when a spectrum must round-trip with its label,

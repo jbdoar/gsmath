@@ -419,6 +419,38 @@ def _calibration_from_payload(data):
     return calibration
 
 
+def _collection_payload(collection):
+    """Each item as its own record (format, version, section) in order, so a
+    collection holds whatever native records hold: spectra, measurements,
+    exposure series, images, other collections."""
+    items = []
+    for item in collection:
+        record = record_for(item)
+        if record.encode is None:
+            raise TypeError(f"a {record.what} can't be stored inside a collection")
+        items.append({"format": record.format, "version": record.version,
+                      record.section: record.encode(item)})
+    return {"label": collection.label, "metadata": to_builtin(collection.metadata), "items": items}
+
+
+def _collection_from_payload(data):
+    from ..collection import Collection
+
+    items = []
+    for index, entry in enumerate(data["items"]):
+        record = _record_named(entry["format"])
+        if record.decode is None:
+            raise ValueError(f"item {index}: a {record.what} can't be stored inside a collection")
+        if entry.get("version") != record.version:
+            raise ValueError(f"item {index}: unsupported {record.what} version {entry.get('version')!r}")
+        items.append(record.decode(entry[record.section]))
+    return Collection(items, label=data["label"], metadata=data["metadata"])  # labels unique
+
+
+def _collection_container(collection):
+    return any(record_for(item).container(item) for item in collection)
+
+
 def _calibration_container(calibration):
     return any(codec_for(v).container
                for step in calibration.steps for v in step.arguments().values())
@@ -445,6 +477,9 @@ RECORDS: list[Record] = [
     Record("gsmath.straylight_correction", 1, "straylight", "stray-light matrix",
            _is("..straylight", "StrayLightCorrection"), _matrix_payload,
            _straylight("StrayLightCorrection")),
+    Record("gsmath.collection", 1, "collection", "collection",
+           _is("..collection", "Collection"), _collection_payload, _collection_from_payload,
+           container=_collection_container),
     # A fitted factory line model keeps its own checksummed envelope.
     Record("gsmath.factory_lines", 1, "model", "factory line model",
            _is("..linefit", "FactoryLineModel"), None, None,
@@ -595,6 +630,7 @@ IMAGE_FORMAT = "gsmath.image"
 MEASUREMENT_FORMAT = "gsmath.measurement"
 EXPOSURE_SERIES_FORMAT = "gsmath.exposure_series"
 CALIBRATION_FORMAT = "gsmath.calibration"
+COLLECTION_FORMAT = "gsmath.collection"
 STRAYLIGHT_FORMATS = {"distribution": "gsmath.straylight_distribution",
                       "correction": "gsmath.straylight_correction"}
 
@@ -650,6 +686,17 @@ def read_calibration(path):
     """Read a Calibration, checking its contents still match the
     fingerprint it was saved with."""
     return read_record(path, record=CALIBRATION_FORMAT)
+
+
+def write_collection(collection, path, *, indent=2):
+    """Write a Collection -- its label, metadata and every item as its own
+    record, in order: JSON for spectra, a container if an item holds an image."""
+    return write_record(collection, path, record=COLLECTION_FORMAT, indent=indent)
+
+
+def read_collection(path):
+    """Read a Collection written by :func:`write_collection` (labels unique)."""
+    return read_record(path, record=COLLECTION_FORMAT)
 
 
 def write_straylight_matrix(matrix, path, *, kind, indent=2):
