@@ -126,6 +126,28 @@ def test_records_and_formats_are_looked_up_in_one_place(tmp_path):
     assert native._value_payload is native.encode_value  # older name kept for linefit
 
 
+def test_calibrations_read_in_a_fresh_process():
+    """Step classes register when their module loads, and gsmath loads
+    modules on first use: a fresh process must still read every step."""
+    import subprocess
+    import sys
+
+    script = ("import gsmath; c = gsmath.read(r'%s'); print(','.join(s.name for s in c.steps))"
+              % (DIRECTORY / "calibration_spectral.gsmath"))
+    done = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=120)
+    assert done.returncode == 0, done.stderr
+    assert {"Despike", "AdaptiveSmooth"} <= set(done.stdout.strip().split(","))
+
+
+def test_unknown_step_types_are_still_refused(tmp_path):
+    record = json.loads((DIRECTORY / "calibration_spectral.gsmath").read_text())
+    record["calibration"]["steps"][0]["type"] = "NoSuchStep"
+    path = tmp_path / "bad.gsmath"
+    path.write_text(json.dumps(record))
+    with pytest.raises(ValueError, match="unknown step type 'NoSuchStep'"):
+        gsmath.read(path)
+
+
 def test_raw_frames_saved_with_the_mosaic_in_metadata_still_read():
     measurement = gsmath.read(DIRECTORY / "legacy_mosaic_in_metadata.gsmath")
     assert measurement.raw.mosaic.pattern == "RGGB"

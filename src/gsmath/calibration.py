@@ -38,7 +38,23 @@ from . import units
 
 STEP_TYPES: dict[str, type] = {}
 """Step classes by name, for reading calibrations back; every subclass of
-Step registers itself."""
+Step registers itself (when its module is imported -- see step_type)."""
+
+
+def step_type(name):
+    """The Step class called ``name``.
+
+    gsmath loads feature modules on first use, so a step's class registers
+    only once its module is imported; a calibration read in a fresh process
+    may name a step (Despike, AdaptiveSmooth, ...) nothing has loaded yet.
+    Every public step is a gsmath export, so asking gsmath for it loads it.
+    Raises KeyError for a name no step has.
+    """
+    if name not in STEP_TYPES:
+        import gsmath
+        if name in getattr(gsmath, "__all__", ()):
+            getattr(gsmath, name)
+    return STEP_TYPES[name]
 
 
 class Step:

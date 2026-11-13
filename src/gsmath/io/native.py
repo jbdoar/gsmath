@@ -401,12 +401,12 @@ def _calibration_payload(calibration):
 
 
 def _calibration_from_payload(data):
-    from ..calibration import STEP_TYPES, Calibration
+    from ..calibration import Calibration, step_type
 
     steps = []
     for step in data["steps"]:
         try:
-            cls = STEP_TYPES[step["type"]]
+            cls = step_type(step["type"])
         except KeyError:
             raise ValueError(f"unknown step type {step['type']!r}") from None
         arguments = {k: decode_value(v) for k, v in step["arguments"].items()}
