@@ -451,6 +451,162 @@ def _collection_from_payload(data):
     return Collection(items, label=data["label"], metadata=data["metadata"])  # labels unique
 
 
+def _series_types():
+    """Stored type name → class, for the series kinds a record can hold
+    (spectra have their own record)."""
+    from ..colorimeter import SpectralSensitivity
+    from ..linecut import LineCut
+    from ..series import Series
+    return {"series": Series, "line_cut": LineCut, "spectral_sensitivity": SpectralSensitivity}
+
+
+def _series_payload(series):
+    kind = next((name for name, cls in _series_types().items() if type(series) is cls), None)
+    if kind is None:
+        raise TypeError(f"can't save a {type(series).__name__}: only Series, LineCut and "
+                        "SpectralSensitivity have a series record")
+    payload = {
+        "type": kind,
+        "axis": _array_payload(series.axis),
+        "values": _array_payload(series.values),
+        "label": series.label,
+        "axis_unit": _unit_text(series.axis_unit),
+        "value_unit": _unit_text(series.value_unit),
+        "channels": None if series.channels is None else list(series.channels),
+        "metadata": to_builtin(series.metadata),
+    }
+    if kind == "series":
+        payload["x_label"] = series.x_label
+    for name in type(series)._PER_SAMPLE:  # a line cut's (x, y) positions
+        value = getattr(series, name)
+        payload[name] = None if value is None else _array_payload(value)
+    return payload
+
+
+def _series_from_payload(data):
+    types = _series_types()
+    if data["type"] not in types:
+        raise ValueError(f"unknown series type {data['type']!r}")
+    cls = types[data["type"]]
+    axis, values = _decode_array(data["axis"]), _decode_array(data["values"])
+    common = {"values": values, "label": data["label"], "value_unit": data["value_unit"],
+              "metadata": data["metadata"]}
+    if cls.__name__ == "Series":
+        return cls(axis, x_unit=data["axis_unit"], channels=data["channels"],
+                   x_label=data.get("x_label"), **common)
+    if cls.__name__ == "LineCut":
+        position = {name: None if data.get(name) is None else _decode_array(data[name])
+                    for name in cls._PER_SAMPLE}
+        return cls(axis, distance_unit=data["axis_unit"], channels=data["channels"],
+                   **position, **common)
+    return cls(axis, wavelength_unit=data["axis_unit"], channels=tuple(data["channels"]), **common)
+
+
+# A saved comparison or check keeps each field's numbers and settings, not
+# the code that extracted them: its fields' getters say so if called.
+_FIELD_SETTINGS = ("mode", "tolerance", "uncertainty", "minimum", "maximum")
+
+
+def _saved_field_getter(_value):
+    raise TypeError("this field was read from a saved result: its numbers are stored, "
+                    "but it can't extract new ones")
+
+
+def _number_payload(value):
+    """A stored number, list or array: plain JSON when every number is
+    finite, else an array payload (which keeps NaN and infinity)."""
+    if value is None or isinstance(value, (bool, str)):
+        return value
+    array = np.asarray(getattr(value, "magnitude", value))
+    if array.dtype.kind in "biuf" and np.all(np.isfinite(array)):
+        return to_builtin(array)
+    if array.dtype.kind not in "biuf":
+        raise TypeError(f"can't store a comparison value of type {type(value).__name__}")
+    if array.ndim == 0:
+        return {"number": str(float(array))}  # "nan", "inf" or "-inf"
+    return {"array": _array_payload(array)}
+
+
+def _number_from_payload(value):
+    if isinstance(value, dict):
+        if "number" in value:
+            if value["number"] not in ("nan", "inf", "-inf"):
+                raise ValueError(f"invalid stored number {value['number']!r}")
+            return float(value["number"])
+        return _decode_array(value["array"])
+    return value
+
+
+def _field_payload(field, unit):
+    settings = {name: _number_payload(getattr(field, name)) if name != "mode" else field.mode
+                for name in _FIELD_SETTINGS}
+    return {"unit": _unit_text(units.parse(unit)), **settings}
+
+
+def _field_from_payload(data):
+    from ..profile import Field
+    return Field(_saved_field_getter, unit=data["unit"],
+                 **{name: data[name] if name == "mode" else _number_from_payload(data[name])
+                    for name in _FIELD_SETTINGS})
+
+
+def _result_tree_payload(tree, leaf):
+    from collections.abc import Mapping
+    return {name: _result_tree_payload(value, leaf) if isinstance(value, Mapping) else leaf(value)
+            for name, value in tree.items()}
+
+
+def _is_stored_leaf(node):
+    """A stored record (its field's mode is text), not a group of fields --
+    even a group that happens to be named "field"."""
+    field = node.get("field")
+    return isinstance(field, dict) and isinstance(field.get("mode"), str) and "passed" in node
+
+
+def _result_tree_from_payload(tree, leaf):
+    return {name: leaf(value) if _is_stored_leaf(value) else _result_tree_from_payload(value, leaf)
+            for name, value in tree.items()}
+
+
+def _comparison_payload(comparison):
+    def leaf(record):
+        return {"measured": _number_payload(record.measured),
+                "reference": _number_payload(record.reference),
+                "difference": _number_payload(record.difference),
+                "passed": record.passed,
+                "field": _field_payload(record.field, record.unit)}
+    return {"label": comparison.label, "tree": _result_tree_payload(comparison.tree, leaf)}
+
+
+def _comparison_from_payload(data):
+    from ..comparison import Comparison, ComparisonRecord
+
+    def leaf(stored):
+        field = _field_from_payload(stored["field"])
+        return ComparisonRecord(
+            _number_from_payload(stored["measured"]), _number_from_payload(stored["reference"]),
+            _number_from_payload(stored["difference"]), field, stored["passed"],
+            units.parse(field.unit))
+    return Comparison(_result_tree_from_payload(data["tree"], leaf), label=data["label"])
+
+
+def _check_payload(check):
+    def leaf(record):
+        return {"value": _number_payload(record.value), "passed": record.passed,
+                "field": _field_payload(record.field, record.unit)}
+    return {"label": check.label, "tree": _result_tree_payload(check.tree, leaf)}
+
+
+def _check_from_payload(data):
+    from ..comparison import Check, CheckRecord
+
+    def leaf(stored):
+        field = _field_from_payload(stored["field"])
+        return CheckRecord(_number_from_payload(stored["value"]), field, stored["passed"],
+                           units.parse(field.unit))
+    return Check(_result_tree_from_payload(data["tree"], leaf), label=data["label"])
+
+
 def _collection_container(collection):
     return any(record_for(item).container(item) for item in collection)
 
@@ -463,6 +619,13 @@ def _calibration_container(calibration):
 RECORDS: list[Record] = [
     Record("gsmath.spectrum", 1, "spectrum", "spectrum", lambda o: isinstance(o, Spectrum),
            _spectrum_payload, _spectrum_from_payload),
+    # After spectra, which are series with a record of their own.
+    Record("gsmath.series", 1, "series", "series", _is("..series", "Series"),
+           _series_payload, _series_from_payload),
+    Record("gsmath.comparison", 1, "comparison", "comparison",
+           _is("..comparison", "Comparison"), _comparison_payload, _comparison_from_payload),
+    Record("gsmath.check", 1, "check", "check", _is("..comparison", "Check"),
+           _check_payload, _check_from_payload),
     Record("gsmath.image", 1, "image", "image", lambda o: isinstance(o, Image),
            _image_payload, _image_from_payload, container=lambda o: True),
     Record("gsmath.measurement", 1, "measurement", "measurement",

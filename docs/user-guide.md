@@ -573,8 +573,37 @@ paired_results = compare(gsmath.read("SN-2066.gsmath"),
 ```
 
 `Collection.read(path)` reads one back and checks it is a collection;
-`gsmath.read(path)` returns whatever a native file holds. Comparison results
-(collections of `Comparison`) have no record yet and can't be written this way.
+`gsmath.read(path)` returns whatever a native file holds.
+
+### Comparison results, checks and series as files
+
+A comparison saves as a `gsmath.comparison` record, a check as a
+`gsmath.check` record, and a comparison of collections (a collection of
+comparisons) with `Collection.write`, like any collection:
+
+```python
+results = compare(measured, references, profile=profile)
+results.write("SN-2066 vs hx0489.gsmath")
+
+saved = gsmath.read("SN-2066 vs hx0489.gsmath")
+[c.label for c in saved if c.passed is False]       # which units failed
+saved["450nm"].summary                               # values, limits, outcome
+```
+
+Each field keeps its measured, reference and difference values (NaN and
+infinity included), its unit, and its mode, tolerance, uncertainty, minimum
+and maximum, so `passed`, `failed`, `summary` and `summary_units()` read back
+the same. What isn't kept is the code that extracted the values: a saved
+field's getter raises if called, so a saved result reports but doesn't
+re-measure. Comparisons with a custom comparator save only if their
+differences are numbers.
+
+A `Series` -- and its kinds `LineCut` (with each sample's position) and
+`SpectralSensitivity` -- saves as a `gsmath.series` record with its axis,
+values, units, channels, label and metadata: `series.write(path)`,
+`Series.read(path)` (or `LineCut.read`, which checks the kind). Spectra keep
+their own `gsmath.spectrum` record. Series, comparisons and checks can all be
+items of a saved collection.
 
 ## Reading and writing spectra
 

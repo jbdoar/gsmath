@@ -74,9 +74,11 @@ def test_compare_of_two_collection_files_matches_comparing_the_collections(tmp_p
 
 
 def test_what_a_collection_file_cannot_hold_is_refused(tmp_path):
-    comparisons = compare(Collection([led("a")]), Collection([led("a")]), profile=SPECTRUM_PROFILE)
-    with pytest.raises(TypeError, match="no native record stores a Comparison"):
-        comparisons.write(tmp_path / "comparisons.gsmath")
+    class Note:
+        label = "note"
+
+    with pytest.raises(TypeError, match="no native record stores a Note"):
+        Collection([Note()]).write(tmp_path / "notes.gsmath")
 
     path = Collection([led("a"), led("b")]).write(tmp_path / "two.gsmath")
     record = json.loads(path.read_text())
