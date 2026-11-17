@@ -43,8 +43,12 @@ from ..spectrum import Spectrum
 # ---- arrays -------------------------------------------------------------
 
 def _unit_text(unit):
-    """Serialize an optional Pint unit using its abbreviated expression."""
-    return None if unit is None else f"{unit:~}"
+    """Serialize an optional Pint unit using its abbreviated expression.
+
+    Pint abbreviates micro as the Greek mu (U+03BC); files always use the
+    micro sign (U+00B5), as format_unit does. Both read back the same.
+    """
+    return None if unit is None else f"{unit:~}".replace("μ", "µ")
 
 
 _RECORD_MEMBER = "record.json"
