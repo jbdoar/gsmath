@@ -159,3 +159,32 @@ def test_script_reads_named_two_column_csvs(tmp_path):
     read = read_line_scans(tmp_path)
     assert [s.set_wavelength_nm for s in read] == [400, 500, 600]
     assert script.main(["calibrate", str(tmp_path / "missing")]) == 2
+
+
+def test_script_applies_a_matrix_to_spectra(tmp_path, capsys):
+    result = stray_light_calibration(scans(range(360, 841, 40)))
+    matrix = result.write(tmp_path / "out")
+    values = 1e4 * np.exp(-0.5 * ((X - 600) / 80) ** 2)
+    for name in ("a", "b"):  # a hair off C's grid, as a re-exported file is
+        np.savetxt(tmp_path / f"lamp_{name}.csv", np.column_stack((X + 1e-5, values)),
+                   delimiter=",", header="wavelength_nm,counts", comments="")
+    out = tmp_path / "applied"
+    assert script.main(["apply", str(tmp_path / "lamp_*.csv"), "--matrix", str(matrix),
+                        "--output", str(out)]) == 0
+    data = np.loadtxt(out / "lamp_a corrected.csv", delimiter=",", skiprows=1)
+    np.testing.assert_allclose(data[:, 2], result.correction.values @ values, rtol=1e-6, atol=1e-5)
+    np.testing.assert_allclose(data[:, 3], data[:, 2] - data[:, 1], atol=1e-5)
+    assert (out / "lamp_b corrected.png").is_file()
+    assert "regridded" not in capsys.readouterr().out
+
+
+def test_apply_regrids_the_matrix_for_another_grid(tmp_path, capsys):
+    matrix = stray_light_calibration(scans(range(360, 841, 40))).write(tmp_path / "out")
+    x = np.arange(310.0, 890.0, 2.0)
+    np.savetxt(tmp_path / "coarse.csv", np.column_stack((x, np.full(len(x), 100.0))), delimiter=",")
+    out = tmp_path / "applied"
+    assert script.main(["apply", str(tmp_path / "coarse.csv"), "--matrix", str(matrix),
+                        "--output", str(out), "--no-plot"]) == 0
+    assert "regridded" in capsys.readouterr().out
+    assert len(np.loadtxt(out / "coarse corrected.csv", delimiter=",", skiprows=1)) == len(x)
+    assert script.main(["apply", str(tmp_path / "nothing_*.csv"), "--matrix", str(matrix)]) == 2

@@ -3,6 +3,7 @@ from monochromator line scans.
 
     gsmath-straylight calibrate SCANS [--output DIR]
     gsmath-straylight evaluate SCANS --matrix C.gsmath [--output DIR]
+    gsmath-straylight apply SPECTRUM... --matrix C.gsmath [--output DIR]
 
 ``SCANS`` is a directory of line scans, one per monochromator wavelength.
 With a ``manifest.csv`` (columns ``file`` and ``set_wavelength_nm``, as the
@@ -11,19 +12,31 @@ matching ``--scan-glob`` is read and its set wavelength taken from its name
 (``StrayLight_550.0.csv``). A scan is a native ``.gsmath`` measurement (its
 dark is subtracted) or spectrum, a LightTouch export, or a two-column CSV.
 
+``apply`` corrects any spectra, broadband or not, read the same way, writing
+``<name> corrected.csv`` (wavelength, original, corrected, difference) and a
+plot for each. A spectrum on the matrix's pixels to within a hundredth of a
+pixel is corrected by C directly; one on another grid inside C's support is
+corrected by C regridded to it.
+
 The science, and reading the scans, is in :mod:`gsmath.straylight`.
 """
 
 from __future__ import annotations
 
 import argparse
+import glob
 import sys
 from pathlib import Path
 
+import matplotlib.pyplot as plt
+import numpy as np
+
 from gsmath.straylight import (
     INTERPOLATIONS, ONE_COUNT, StrayLightCorrection, characterize_scan, evaluate_correction, plot_correction,
-    read_line_scans, stray_light_calibration, write_rows,
+    read_line_scan, read_line_scans, stray_light_calibration, write_rows,
 )
+
+GRID_TOLERANCE = 0.01  # of a pixel: closer than this is the same pixel
 
 
 def plot_scans(scans, corrected, directory, every):
@@ -67,6 +80,84 @@ def evaluate(args) -> int:
                args.output / "plots" / "scans", args.plot_every)
     print(f"{args.matrix.name} on {len(evaluation.metrics)} of {len(scans)} scans")
     report_evaluation(evaluation.summary)
+    print(f"Artifacts: {args.output.resolve()}")
+    return 0
+
+
+def expand(paths):
+    """Expand wildcards the shell left alone (Windows); keep order, drop repeats."""
+    found = []
+    for path in paths:
+        matches = sorted(glob.glob(str(path))) if glob.has_magic(str(path)) else [str(path)]
+        if not matches:
+            raise ValueError(f"no file matches {path}")
+        found += [Path(m) for m in matches if Path(m) not in found]
+    return found
+
+
+def correction_for(correction, spectrum, cache):
+    """C itself when the spectrum is on its pixels, else C regridded to the
+    spectrum's grid (which raises if the grid reaches outside C's support)."""
+    x, w = correction.wavelength, spectrum.wavelength
+    if len(w) == len(x) and np.max(np.abs(w - x)) <= GRID_TOLERANCE * np.min(np.abs(np.diff(x))):
+        return correction
+    key = w.tobytes()
+    if key not in cache:
+        cache[key] = correction.regrid(w)
+    return cache[key]
+
+
+def background_subtracted(spectrum):
+    """A LightTouch header's Background Subtract flag, or None without one."""
+    for line in spectrum.metadata.get("header", []):
+        if line.endswith("[Background Subtract]"):
+            return line.split()[0].lower() == "true"
+    return None
+
+
+def plot_applied(spectrum, corrected, path):
+    fig, (top, bottom) = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
+    top.plot(spectrum.wavelength, spectrum.values, label="Original")
+    top.plot(spectrum.wavelength, corrected, label="Corrected")
+    top.set_ylabel("Signal")
+    top.set_title(spectrum.label)
+    top.legend()
+    bottom.plot(spectrum.wavelength, corrected - spectrum.values)
+    bottom.axhline(0.0, color="k", lw=0.5)
+    bottom.set_ylabel("Corrected - original")
+    bottom.set_xlabel("Wavelength (nm)")
+    fig.tight_layout()
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+
+
+def apply(args) -> int:
+    paths = expand(args.spectra)
+    grid = None if args.matrix.suffix.lower() == ".gsmath" else read_line_scan(paths[0]).wavelength
+    correction = StrayLightCorrection.read(args.matrix, grid)
+    args.output.mkdir(parents=True, exist_ok=True)
+    cache = {}
+    for path in paths:
+        spectrum = read_line_scan(path)
+        y = spectrum.values
+        matrix = correction_for(correction, spectrum, cache)
+        corrected = matrix.apply_matrix(y)
+        np.savetxt(args.output / f"{path.stem} corrected.csv",
+                   np.column_stack((spectrum.wavelength, y, corrected, corrected - y)),
+                   delimiter=",", fmt="%.6f", comments="",
+                   header="wavelength_nm,original,corrected,difference")
+        if args.plot:
+            plot_applied(spectrum, corrected, args.output / f"{path.stem} corrected.png")
+        change = f"{100 * (corrected.sum() / y.sum() - 1):+.2f}%" if y.sum() else "n/a"
+        negative = int((corrected < 0).sum())
+        print(f"{path.name}: total signal {change}"
+              f"{'' if matrix is correction else ' (matrix regridded)'}; "
+              f"{negative} negative pixel{'' if negative == 1 else 's'}"
+              f"{f', minimum {corrected.min():.4g}' if negative else ''}")
+        if background_subtracted(spectrum) is False:
+            print("  warning: the header says Background Subtract False; the correction expects "
+                  "dark-subtracted signal and redistributes any offset as if it were light.")
+    print(f"Corrected {len(paths)} spectr{'um' if len(paths) == 1 else 'a'} with {args.matrix.name}")
     print(f"Artifacts: {args.output.resolve()}")
     return 0
 
@@ -149,6 +240,22 @@ def parser():
     e.add_argument("--matrix", type=Path, required=True, metavar="PATH",
                    help="Path to a native .gsmath or legacy .bin correction matrix.")
     e.set_defaults(func=evaluate)
+
+    a = sub.add_parser(
+        "apply", formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        help="Correct spectra with an existing correction matrix.",
+        description="Apply a correction matrix to spectra and write each corrected spectrum as CSV "
+                    "(wavelength, original, corrected, difference), with a plot.")
+    a.add_argument("spectra", type=Path, nargs="+", metavar="SPECTRUM",
+                   help="Spectrum files (LightTouch export, two-column CSV, or native .gsmath); "
+                        "wildcards are expanded.")
+    a.add_argument("--matrix", type=Path, required=True, metavar="PATH",
+                   help="Path to a native .gsmath or legacy .bin correction matrix (a .bin is taken "
+                        "to be on the first spectrum's grid).")
+    a.add_argument("--output", type=Path, default="artifacts/straylight/applied", metavar="DIRECTORY",
+                   help="Directory for the corrected spectra and plots.")
+    a.add_argument("--no-plot", dest="plot", action="store_false", help="Skip the plots.")
+    a.set_defaults(func=apply)
     return p
 
 
