@@ -555,6 +555,56 @@ A missing or extra label raises an error rather than silently dropping an
 item. The comparison results retain the measured collection's order, label,
 and metadata.
 
+### Collections as single files
+
+A collection saves to one native `.gsmath` file (a `gsmath.collection`
+record): its label and metadata, then each item as its own native record, in
+order. Items can be spectra, measurements, exposure series, images, or other
+collections. A collection of spectra stays readable JSON; one holding an image
+is written as a container. Labels must be unique when written and when read.
+
+```python
+references.write("unit references.gsmath")
+measured.write("SN-2066.gsmath")
+
+# The same comparison, from the files:
+paired_results = compare(gsmath.read("SN-2066.gsmath"),
+                         gsmath.read("unit references.gsmath"), profile=profile)
+```
+
+`Collection.read(path)` reads one back and checks it is a collection;
+`gsmath.read(path)` returns whatever a native file holds.
+
+### Comparison results, checks and series as files
+
+A comparison saves as a `gsmath.comparison` record, a check as a
+`gsmath.check` record, and a comparison of collections (a collection of
+comparisons) with `Collection.write`, like any collection:
+
+```python
+results = compare(measured, references, profile=profile)
+results.write("SN-2066 vs hx0489.gsmath")
+
+saved = gsmath.read("SN-2066 vs hx0489.gsmath")
+[c.label for c in saved if c.passed is False]       # which units failed
+saved["450nm"].summary                               # values, limits, outcome
+```
+
+Each field keeps its measured, reference and difference values (NaN and
+infinity included), its unit, and its mode, tolerance, uncertainty, minimum
+and maximum, so `passed`, `failed`, `summary` and `summary_units()` read back
+the same. What isn't kept is the code that extracted the values: a saved
+field's getter raises if called, so a saved result reports but doesn't
+re-measure. Comparisons with a custom comparator save only if their
+differences are numbers.
+
+A `Series` -- and its kinds `LineCut` (with each sample's position) and
+`SpectralSensitivity` -- saves as a `gsmath.series` record with its axis,
+values, units, channels, label and metadata: `series.write(path)`,
+`Series.read(path)` (or `LineCut.read`, which checks the kind). Spectra keep
+their own `gsmath.spectrum` record. Series, comparisons and checks can all be
+items of a saved collection.
+
 ## Reading and writing spectra
 
 Use the native `.gsmath` format when a spectrum must round-trip with its label,

@@ -105,6 +105,23 @@ class Series(Sampled):
             fields[name] = value
         return type(self)(**fields)
 
+    # files
+    def write(self, path, *, indent=2):
+        """Save as a native ``.gsmath`` file (a ``gsmath.series`` record):
+        axis, values, units, channels, label, metadata, and a line cut's
+        positions. Spectra have their own record and formats."""
+        from .io.native import write_record
+        return write_record(self, path, record="gsmath.series", indent=indent)
+
+    @classmethod
+    def read(cls, path):
+        """Read a series saved by :meth:`write` (checked to be a ``cls``)."""
+        from .io.native import read_record
+        series = read_record(path, record="gsmath.series")
+        if not isinstance(series, cls):
+            raise ValueError(f"{path} holds a {type(series).__name__}, not a {cls.__name__}")
+        return series
+
     # channels
     def channel(self, name):
         """One named channel (values ``(n,)``), or a list of names as a

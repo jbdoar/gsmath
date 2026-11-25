@@ -128,7 +128,7 @@
               },
               "label": "lamp",
               "wavelength_unit": "nm",
-              "value_unit": "\u03bcW / cm ** 2 / nm / sr",
+              "value_unit": "\u00b5W / cm ** 2 / nm / sr",
               "metadata": {
                 "instrument": "example",
                 "averages": 3,

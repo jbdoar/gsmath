@@ -123,6 +123,23 @@ class Comparison:
 
         return result
 
+    def write(self, path, *, indent=2):
+        """Save as a native ``.gsmath`` file (a ``gsmath.comparison`` record):
+        every field's measured, reference and difference values, unit, mode,
+        tolerance, uncertainty, limits and outcome. A comparison of
+        collections (a Collection of comparisons) saves with
+        ``Collection.write``."""
+        from .io.native import write_record
+        return write_record(self, path, record="gsmath.comparison", indent=indent)
+
+    @classmethod
+    def read(cls, path):
+        """Read a comparison saved by :meth:`write`. Its fields keep their
+        settings and units but not their getters: it reports, and can't
+        extract new values."""
+        from .io.native import read_record
+        return read_record(path, record="gsmath.comparison")
+
 
 def compare(measured, reference, *, profile):
     """
@@ -596,6 +613,17 @@ class Check:
             return found
 
         return {"label": None, "results": walk(self.tree), "passed": None, "failed": None}
+
+    def write(self, path, *, indent=2):
+        """Save as a native ``.gsmath`` file (a ``gsmath.check`` record)."""
+        from .io.native import write_record
+        return write_record(self, path, record="gsmath.check", indent=indent)
+
+    @classmethod
+    def read(cls, path):
+        """Read a check saved by :meth:`write`."""
+        from .io.native import read_record
+        return read_record(path, record="gsmath.check")
 
 
 def check(value, profile):

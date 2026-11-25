@@ -75,6 +75,18 @@ class Collection(Sequence, Summarised):
         """Return item labels in collection order."""
         return tuple(item.label for item in self)
 
+    def write(self, path, *, indent=2):
+        """Save as one native ``.gsmath`` file: the label, metadata and each
+        item as its own record, in order (a container if an item holds an image)."""
+        from .io.native import write_collection
+        return write_collection(self, path, indent=indent)
+
+    @classmethod
+    def read(cls, path):
+        """Read a collection saved by :meth:`write`."""
+        from .io.native import read_collection
+        return read_collection(path)
+
     def copy(
         self,
         *,

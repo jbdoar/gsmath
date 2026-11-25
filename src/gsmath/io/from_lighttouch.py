@@ -2,11 +2,16 @@
 
 from pathlib import Path
 
-from gsmath import Spectrum
+from .._lighttouch import lighttouch_unit_from_header
+from ..spectrum import Spectrum
 
 
 def from_lighttouch(path):
-    """Parse LightTouch metadata and spectral rows into a spectrum."""
+    """Parse LightTouch metadata and spectral rows into a unit-aware spectrum.
+
+    A ``.cal`` contains output-quantity-per-count factors; other LightTouch
+    exports contain the spectral quantity named by their third header line.
+    """
     path = Path(path)
 
     try:
@@ -17,7 +22,9 @@ def from_lighttouch(path):
         
     lines = path.read_text(encoding=encoding).splitlines()
 
-    # A file saved from a spreadsheet ends each header line with a comma.
+    # Spreadsheet round trips (e.g. Excel "Save as CSV") pad every header
+    # line with trailing delimiters, such as "35," or ",". Strip them, and
+    # any whitespace, so the header parses and is stored as LightTouch wrote it.
     header_length = int(lines[3].strip().rstrip(","))
     data_start = 4 + header_length + 3
 
@@ -28,6 +35,10 @@ def from_lighttouch(path):
         if "[Integration Time ms]" in line:
             integration_time = float(line.split()[0])
             break
+
+    value_unit = lighttouch_unit_from_header(header)
+    if value_unit is not None and path.suffix.lower() == ".cal":
+        value_unit = f"({value_unit}) / count"
     
     metadata = {
         "header": header,
@@ -39,4 +50,5 @@ def from_lighttouch(path):
         encoding=encoding,
         skip_header=data_start,
         metadata=metadata,
+        value_unit=value_unit,
     )

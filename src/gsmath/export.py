@@ -3,8 +3,6 @@
 from collections.abc import Mapping
 from pprint import pprint
 
-import pandas as pd
-
 from .collection import Collection
 from ._utils import format_path, to_builtin
 from . import units
@@ -50,6 +48,8 @@ def to_dataframe(value, *, include_units=False):
     With ``include_units=True``, known units are appended to column labels so
     the underlying cells remain numeric and useful to pandas.
     """
+    import pandas as pd
+
     if isinstance(value, Collection):
         rows = []
 
