@@ -1,5 +1,6 @@
 """Presentation-oriented tabular reports built from export DataFrames."""
 
+
 def report(
     value,
     *,

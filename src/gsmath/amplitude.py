@@ -23,6 +23,8 @@ import numpy as np
 
 from .analysis.base import Result
 from .calibration import Calibration, PerExposure, Responsivity, StrayLight
+from ._lighttouch import (LIGHTTOUCH_QUANTITIES as _LIGHTTOUCH_QUANTITIES,
+                          lighttouch_unit)
 from .comparison import compare
 from .measurement import Measurement
 from .profile import Field, Profile
@@ -31,26 +33,6 @@ from . import units
 
 LIGHTTOUCH_INVALID = 10000.0
 """LightTouch's factor for samples inside the standard's range without usable counts."""
-
-_LIGHTTOUCH_QUANTITIES = {
-    "radiance": ("Radiance (µW/cm²/sr)", "uW / cm^2 / sr / nm"),
-    "irradiance": ("Irradiance (µW/cm²)", "uW / cm^2 / nm"),
-    "counts": ("Counts", "count"),
-}
-
-
-def lighttouch_unit(spectrum):
-    """The spectral unit named by a LightTouch file's third header line, or None.
-
-    ``Radiance (µW/cm²/sr)`` is µW/cm²/sr/nm, ``Irradiance (µW/cm²)`` µW/cm²/nm
-    and ``Counts`` counts. For an amplitude ``.cal`` this is the calibrated
-    quantity; its factors are that per count.
-    """
-    header = spectrum.metadata.get("header") or []
-    words = header[2].split() if len(header) > 2 else []
-    entry = _LIGHTTOUCH_QUANTITIES.get(words[0].lower()) if words else None
-    return None if entry is None else entry[1]
-
 
 def unit_text(unit):
     """A unit as plain ASCII for consoles and file headers: ``uW ms / cm^2 / count / nm / sr``."""
